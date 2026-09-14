@@ -11,7 +11,10 @@ public class TakingTurnsQueueTests
     // Scenario: Create a queue with the following people and turns: Bob (2), Tim (5), Sue (3) and
     // run until the queue is empty
     // Expected Result: Bob, Tim, Sue, Bob, Tim, Sue, Tim, Sue, Tim, Tim
-    // Defect(s) Found: 
+    // Defect(s) Found: FAILED. Actual order was Sue, Sue, Sue, Tim, Tim, Tim, Tim, Tim, Bob, Bob.
+    // PersonQueue.Enqueue inserts new items at index 0 instead of the back of the list, so the
+    // most recently added person is served first (LIFO/stack behavior) instead of the first
+    // person added being served first (FIFO), reversing the expected turn order entirely.
     public void TestTakingTurnsQueue_FiniteRepetition()
     {
         var bob = new Person("Bob", 2);
@@ -43,7 +46,9 @@ public class TakingTurnsQueueTests
     // Scenario: Create a queue with the following people and turns: Bob (2), Tim (5), Sue (3)
     // After running 5 times, add George with 3 turns.  Run until the queue is empty.
     // Expected Result: Bob, Tim, Sue, Bob, Tim, Sue, Tim, George, Sue, Tim, George, Tim, George
-    // Defect(s) Found: 
+    // Defect(s) Found: FAILED. Actual order was Sue, Sue, Sue, Tim, Tim, George, George, George,
+    // Tim, Tim, Tim, Bob, Bob. Same root cause as the previous test: PersonQueue's LIFO behavior
+    // (Enqueue inserting at the front) reverses the expected FIFO turn order.
     public void TestTakingTurnsQueue_AddPlayerMidway()
     {
         var bob = new Person("Bob", 2);
@@ -85,7 +90,11 @@ public class TakingTurnsQueueTests
     // Scenario: Create a queue with the following people and turns: Bob (2), Tim (Forever), Sue (3)
     // Run 10 times.
     // Expected Result: Bob, Tim, Sue, Bob, Tim, Sue, Tim, Sue, Tim, Tim
-    // Defect(s) Found: 
+    // Defect(s) Found: FAILED with an exception ("No one in the queue.") thrown before all 10 calls
+    // completed. Two defects combine here: (1) the LIFO ordering bug from PersonQueue, and (2)
+    // GetNextPerson's re-enqueue condition is "Turns > 1", which does not catch people with
+    // infinite turns (Turns <= 0). Tim (0 turns = forever) gets dropped from the queue after his
+    // first turn instead of cycling back in forever, so the queue eventually runs empty.
     public void TestTakingTurnsQueue_ForeverZero()
     {
         var timTurns = 0;
@@ -116,7 +125,10 @@ public class TakingTurnsQueueTests
     // Scenario: Create a queue with the following people and turns: Tim (Forever), Sue (3)
     // Run 10 times.
     // Expected Result: Tim, Sue, Tim, Sue, Tim, Sue, Tim, Tim, Tim, Tim
-    // Defect(s) Found: 
+    // Defect(s) Found: FAILED with an exception ("No one in the queue.") thrown before all 10 calls
+    // completed. Same two combined defects as the ForeverZero test: the LIFO ordering bug, and
+    // Tim (-3 turns = forever) being dropped from the queue after one turn instead of being
+    // re-enqueued forever, since -3 is not greater than 1.
     public void TestTakingTurnsQueue_ForeverNegative()
     {
         var timTurns = -3;
@@ -143,7 +155,8 @@ public class TakingTurnsQueueTests
     [TestMethod]
     // Scenario: Try to get the next person from an empty queue
     // Expected Result: Exception should be thrown with appropriate error message.
-    // Defect(s) Found: 
+    // Defect(s) Found: PASSED. No defects found - the exception is thrown correctly with the
+    // message "No one in the queue." as expected.
     public void TestTakingTurnsQueue_Empty()
     {
         var players = new TakingTurnsQueue();
